@@ -3,7 +3,7 @@ package com.engine.entity;
 import com.engine.AbstractGame;
 import com.engine.animation.Animation;
 import com.engine.animation.Direction;
-import com.engine.event.KeyListener;
+import com.engine.event.DefaultKeyListener;
 import com.engine.event.Listener;
 import com.engine.map.Map;
 
@@ -34,7 +34,7 @@ public abstract class AbstractStaticPlayer extends AbstractEntity implements Pla
     }
 
     protected void addListeners() {
-        context.getKeyListener(KeyListener.class).addListener(KeyEvent.VK_SPACE, mainKeyListener)
+        context.getKeyListener(DefaultKeyListener.class).addListener(KeyEvent.VK_SPACE, mainKeyListener)
                 .addListener(KeyEvent.VK_W, mainKeyListener)
                 .addListener(KeyEvent.VK_UP, mainKeyListener)
                 .addListener(KeyEvent.VK_KP_UP, mainKeyListener)
@@ -75,10 +75,10 @@ public abstract class AbstractStaticPlayer extends AbstractEntity implements Pla
         damage();
         if(direction!=Direction.NONE) {
             if(direction==Direction.LEFT) knockback*=-1;
-            context.getMap(Map.class).moveEntitiesUnsafely(knockback, 0);
+            context.getMap(Map.class).moveUnsafely(knockback, 0);
             context.moveEntities(knockback, 0);
-            if (context.getMap(Map.class).containsCollisionWith(this)) {
-                context.getMap(Map.class).moveEntitiesUnsafely(-knockback, 0);
+            if (context.getMap(Map.class).hasCollisionWith(this)) {
+                context.getMap(Map.class).moveUnsafely(-knockback, 0);
                 context.moveEntities(-knockback, 0);
             }
         }
@@ -111,10 +111,10 @@ public abstract class AbstractStaticPlayer extends AbstractEntity implements Pla
      */
     private void moveGame(int stepsH) {
         Map map=context.getMap(Map.class);
-        map.moveEntitiesUnsafely(stepsH, 0);
+        map.moveUnsafely(stepsH, 0);
         context.moveEntities(stepsH, 0);
-        if(map.containsCollisionWith(this)) {
-            map.moveEntitiesUnsafely(-stepsH, 0);
+        if(map.hasCollisionWith(this)) {
+            map.moveUnsafely(-stepsH, 0);
             context.moveEntities(-stepsH, 0);
             if(mFistMoveTry) {
                 mFistMoveTry = false;
@@ -141,7 +141,7 @@ public abstract class AbstractStaticPlayer extends AbstractEntity implements Pla
          */
         @Override
         public void keyDown() {
-            switch (context.getKeyListener(KeyListener.class).getKeyCode()) {
+            switch (context.getKeyListener(DefaultKeyListener.class).getKeyCode()) {
                 case KeyEvent.VK_A:
                 case KeyEvent.VK_LEFT:
                 case KeyEvent.VK_KP_LEFT:
@@ -165,7 +165,7 @@ public abstract class AbstractStaticPlayer extends AbstractEntity implements Pla
          */
         @Override
         public void keyUp() {
-            switch (context.getKeyListener(KeyListener.class).getKeyCode()) {
+            switch (context.getKeyListener(DefaultKeyListener.class).getKeyCode()) {
                 case KeyEvent.VK_A:
                 case KeyEvent.VK_LEFT:
                 case KeyEvent.VK_KP_LEFT:

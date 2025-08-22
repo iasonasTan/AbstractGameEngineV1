@@ -1,12 +1,14 @@
 package com.engine.entity;
 
+import com.engine.AbstractGame;
 import com.engine.Context;
 import com.engine.ManifestManager;
 import com.engine.animation.Animatable;
 import com.engine.animation.Animation;
 import com.engine.animation.Direction;
+import com.engine.behavior.Collidable;
+import com.engine.behavior.Renderable;
 import com.engine.event.Listener;
-import com.engine.AbstractGame;
 import com.engine.map.AbstractMap;
 import com.engine.map.Map;
 import com.engine.view.AbstractGameScreen;
@@ -18,14 +20,16 @@ import java.awt.*;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.file.FileSystems;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Objects;
 import java.util.function.Function;
 
 /**
  * Superclass of every entity inside the game.<br>
  * Automatically gets Drawer instance by subclass,
- * but you have to add it manually to screen by calling {@link #startDrawing()}.<br>
+ * but you have to add it manually to screen by calling {@link #startRendering()}.<br>
  * Takes whatever implementation it needs by subclass.<br>
  * Adding this entity to the right place is important.<br>
  * <b>WARNING</b> Entity adds it's drawer automatically to the main game screen in the context,
@@ -326,8 +330,8 @@ public abstract class AbstractEntity implements Animatable, Entity {
         return mIsSolid;
     }
 
-    @Override
-    public <T extends Drawer> T getDrawer(Class<T> drawerClass) throws ClassCastException {
+    // TODO WTF IS WRONG !?
+    public <T extends Renderable.Drawer> T getDrawer(Class<T> drawerClass) throws ClassCastException {
         if(mDrawer==null) mDrawer = createDrawer();
         return drawerClass.cast(mDrawer);
     }
@@ -467,7 +471,7 @@ public abstract class AbstractEntity implements Animatable, Entity {
             moveUnsafely(0, (int) mVelocityY);
             context.getMap(Map.class).getColliderOf(this).ifPresent(tile -> {
                 mFalling =false;
-                worldY=tile.getHitbox().y-height;
+                worldY=tile.getWorldY()-height;
                 mFallListeners.forEach(Listener::keyUp);
             });
         }
@@ -482,14 +486,14 @@ public abstract class AbstractEntity implements Animatable, Entity {
     public void checkGround() {
         context.getMap(Map.class).getColliderOf(this).ifPresent((Entity e) -> {
             if(!mOnJump &&!mFalling) {
-                worldY=e.getHitbox().y-height;
+                worldY=e.getWorldY()-height;
             }
         });
         if(!mOnJump &&!mFalling) {
             int diff=5;
             worldY+=diff;
             updateHitbox(mHitbox);
-            if (!context.getMap(Map.class).containsCollisionWith(this)) {
+            if (!context.getMap(Map.class).hasCollisionWith(this)) {
                 startFalling();
             }
             worldY-=diff;
@@ -508,7 +512,7 @@ public abstract class AbstractEntity implements Animatable, Entity {
      */
     public boolean moveSafely(int stepsX, int stepsY) {
         moveUnsafely(stepsX, stepsY);
-        if(context.getMap(Map.class).containsCollisionWith(this)) {
+        if(context.getMap(Map.class).hasCollisionWith(this)) {
             moveUnsafely(-stepsX, -stepsY);
             return false;
         }
@@ -645,7 +649,7 @@ public abstract class AbstractEntity implements Animatable, Entity {
     protected void kill() {
         mIsAlive = false;
         System.out.println(getDeathMessage());
-        context.getDisplay(DisplayableDrawer.class).removeEntity(this);
+        context.getDisplay(DisplayableDrawer.class).removeRenderable(this);
     }
 
     /**
@@ -723,10 +727,10 @@ public abstract class AbstractEntity implements Animatable, Entity {
      * @return returns true if other collides this.
      * @see #updateHitbox(Rectangle)
      */
-    public final boolean hasCollisionWith(Entity other) {
+    public final boolean hasCollisionWith(Collidable other) {
         if(equals(other)||other==null)
             return false;
-        return mIsSolid &&other.isSolid() && mHitbox.intersects(other.getHitbox());
+        return mHitbox.intersects(other.getHitbox());
     }
 
     /**
@@ -834,7 +838,7 @@ public abstract class AbstractEntity implements Animatable, Entity {
      * Adds drawer to main game screen.
      * Starts drawing entity until entity is killed.
      */
-    public Entity startDrawing() {
+    public Entity startRendering() {
         context.getDisplay(DisplayableDrawer.class).addEntitiesToDraw(this);
         return this;
     }
@@ -843,7 +847,7 @@ public abstract class AbstractEntity implements Animatable, Entity {
      * Initial config for creating an Entity.
      * @param hitbox the initial location and size of the {@code Entity}.
      * @param isSolid {@code true} if the entity solid. A solid entity collides with others.
-     * @see #hasCollisionWith(Entity)
+     * @see com.engine.map.Map#hasCollisionWith(Collidable)
      * @param isStatic {@code true} if the entity static, A {@code static} entity does <i>not</i> fall, do any
      *                             animations or use physics, static entities can be moved only via
      *                             {@link #moveSafely(int, int)} <i>or</i> {@link #moveUnsafely(int, int)}.
@@ -856,7 +860,7 @@ public abstract class AbstractEntity implements Animatable, Entity {
      * Responsible to draw the entity.
      * @see AbstractGameScreen
      */
-    public abstract class AbstractDrawer implements Entity.Drawer {
+    public abstract class AbstractDrawer implements Drawer {
         /**
          * If true, hitbox and debug things will be drawn.
          * @see #drawAll(Graphics2D)
@@ -875,19 +879,9 @@ public abstract class AbstractEntity implements Animatable, Entity {
         private long mLastSpriteChangeTime_millis =AbstractGame.gameTimeMillis();
 
         /**
-         * Sprites showing when moving left
+         * Sprites arrays for Directions.
          */
-        private Image[] mSpritesLeft =null;
-
-        /**
-         * Sprites showing when moving right
-         */
-        private Image[] mSpritesRight=null;
-
-        /**
-         * Sprites showing when not moving
-         */
-        private Image[] mSpritesNone=null;
+        private final java.util.Map<Direction, Image[]> mSpritesMap=new HashMap<>();
 
         /**
          * Store the index of the current sprite
@@ -946,15 +940,8 @@ public abstract class AbstractEntity implements Animatable, Entity {
          * @throws ArrayIndexOutOfBoundsException if no sprites are loaded.
          */
         protected Image getCurrentSprite() throws ArrayIndexOutOfBoundsException {
-            if(mCustomSprite!=null)
-                return mCustomSprite;
-            else if(getDirection()==Direction.LEFT)
-                return mSpritesLeft[mCurrentSprite_idx];
-            else if (getDirection()==Direction.RIGHT)
-                return mSpritesRight[mCurrentSprite_idx];
-            else if (getDirection()==Direction.NONE)
-                return mSpritesNone[mCurrentSprite_idx];
-            return null;
+            if(mCustomSprite!=null) return mCustomSprite;
+            return mSpritesMap.get(getDirection())[mCurrentSprite_idx];
         }
 
         /**
@@ -981,18 +968,12 @@ public abstract class AbstractEntity implements Animatable, Entity {
          * @see #mCustomSprite
          */
         private void checkSpriteIdx() {
-            if(mCustomSpriteEndTime_millis==-1)
-                // using custom sprite forever.
+            if(mCustomSpriteEndTime_millis==-1) // using custom sprite until manually removed.
                 return;
-            int len=Integer.MAX_VALUE;
-            if(getDirection()==Direction.NONE&&mSpritesNone!=null)
-                len=mSpritesNone.length;
-            if(getDirection()==Direction.RIGHT&&mSpritesRight!=null)
-                len=mSpritesRight.length;
-            if(getDirection()==Direction.LEFT&&mSpritesLeft!=null)
-                len=mSpritesLeft.length;
-            if(mCurrentSprite_idx >= len)
-                mCurrentSprite_idx =0;
+            Image[] sprites=mSpritesMap.get(getDirection());
+            if(sprites!=null&&sprites.length<=mCurrentSprite_idx) {
+                mCurrentSprite_idx = 0;
+            }
         }
 
         /**
@@ -1005,25 +986,17 @@ public abstract class AbstractEntity implements Animatable, Entity {
         public final void loadSprites(String resourcesRoot, Direction direction, String... resources) throws IOException, IllegalArgumentException {
             Function<Integer, Image> load= integer -> {
                 try {
-                    return ImageIO.read(Objects.requireNonNull(getClass().getResource(resourcesRoot + System.getProperty("file.separator") + resources[integer])));
+                    return ImageIO.read(Objects.requireNonNull(getClass().getResource(resourcesRoot + FileSystems.getDefault().getSeparator() + resources[integer])));
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
             };
 
-            if(direction==Direction.LEFT) {
-                mSpritesLeft = new Image[resources.length];
-                for (int i = 0; i < resources.length; i++)
-                    mSpritesLeft[i]=load.apply(i);
-            } else if (direction==Direction.RIGHT) {
-                mSpritesRight = new Image[resources.length];
-                for (int i = 0; i < resources.length; i++)
-                    mSpritesRight[i] = load.apply(i);
-            } else if (direction==Direction.NONE) {
-                mSpritesNone = new Image[resources.length];
-                for (int i = 0; i < resources.length; i++)
-                    mSpritesNone[i] = load.apply(i);
+            Image[] sprites=new Image[resources.length];
+            for (int i = 0; i < sprites.length; i++) {
+                sprites[i] = load.apply(i);
             }
+            mSpritesMap.put(direction, sprites);
         }
 
         /**
@@ -1038,12 +1011,12 @@ public abstract class AbstractEntity implements Animatable, Entity {
          */
         public final void drawAll(Graphics2D graphics) {
             // return if entity is not visible
-            if (getWorldX()+getWidth() < 0 || getWorldX() > context.getDisplay(DisplayableDrawer.class).dimension().width) return;
-
+            if (getWorldX()+getWidth() < 0 || getWorldX() > context.getDisplay(DisplayableDrawer.class).dimension().width) {
+                return;
+            }
             nextSprite();
             drawEntity(graphics);
-            if(mCustomSprite!=null&&mCustomSpriteEndTime_millis!=-1&&
-                    mCustomSpriteEndTime_millis<AbstractGame.gameTimeMillis()) {
+            if(mCustomSprite!=null&&mCustomSpriteEndTime_millis!=-1&& mCustomSpriteEndTime_millis<AbstractGame.gameTimeMillis()) {
                 mCustomSprite=null;
             }
             if(sDrawDebug) {

@@ -1,14 +1,17 @@
 package com.engine.entity;
 
 import com.engine.AbstractGame;
+import com.engine.behavior.Collidable;
+import com.engine.behavior.Updatable;
 
+import java.awt.*;
 import java.util.*;
 
 /**
  * Class manages entities of type T.
  * @param <T> type of entities that will be managed.
  */
-public class DefaultEntityManager<T extends Entity> extends ArrayList<T> implements EntityManager<T> {
+public class DefaultEntityManager<T extends Entity> extends ArrayList<T> implements EntityCollection<T> {
     /**
      * Context as AbstractGame.
      */
@@ -27,9 +30,9 @@ public class DefaultEntityManager<T extends Entity> extends ArrayList<T> impleme
      * @param entity entity to check.
      * @return {@code true} if given entity collides with one of the containing entities, {@code false} otherwise.
      */
-    public final boolean containsCollisionWith(Entity entity) {
+    public final boolean hasCollisionWith(Collidable entity) {
         for(T e: this) {
-            if(e.hasCollisionWith(entity))
+            if(e instanceof Collidable collidable && collidable.hasCollisionWith(entity))
                 return true;
         }
         return false;
@@ -40,9 +43,9 @@ public class DefaultEntityManager<T extends Entity> extends ArrayList<T> impleme
      * @param entity entity to check.
      * @return Entity that collides the given entity inside an {@link java.util.Optional}, {@code Optional.empty()} otherwise.
      */
-    public final Optional<T> getColliderOf(Entity entity) {
+    public final Optional<T> getColliderOf(Collidable entity) {
         for(T e: this) {
-            if(e.hasCollisionWith(entity))
+            if(e instanceof Collidable collidable && collidable.hasCollisionWith(entity))
                 return Optional.of(e);
         }
         return Optional.empty();
@@ -61,7 +64,7 @@ public class DefaultEntityManager<T extends Entity> extends ArrayList<T> impleme
     /**
      * Updates all containing entities and removes dead ones.
      */
-    public void updateEntities() {
+    public void update() {
         Iterator<T> iter=iterator();
         while(iter.hasNext()) {
             T t=iter.next();
@@ -73,11 +76,34 @@ public class DefaultEntityManager<T extends Entity> extends ArrayList<T> impleme
     }
 
     /**
+     * Says if entity is garbage, if yes it's manager has to wipe it from memory.
+     *
+     * @return return {@code true} if entity is garbage; {@code false} otherwise.
+     */
+    @Override
+    public boolean isGarbage() {
+        boolean isGarbage=false;
+        for (int i = 0; i < size(); i++) {
+            isGarbage = isGarbage || get(i).isGarbage();
+        }
+        return isGarbage;
+    }
+
+    /**
+     * Makes entity garbage, which means no update OR draw wil happen.
+     * It's manager has to remove it after update.
+     */
+    @Override
+    public void makeGarbage() {
+        forEach(Updatable::makeGarbage);
+    }
+
+    /**
      * Moves all entities unsafely.
      * @param stepsX pixels to move each entity horizontally.
      * @param stepsY pixels to move each entity vertically.
      */
-    public void moveEntitiesUnsafely(int stepsX, int stepsY) {
+    public void moveUnsafely(int stepsX, int stepsY) {
         for (int i = 0; i < size(); i++) { // avoid ConcurrentModificationException
             get(i).moveUnsafely(stepsX, stepsY);
         }
@@ -90,10 +116,11 @@ public class DefaultEntityManager<T extends Entity> extends ArrayList<T> impleme
      * @param stepsX pixels to move entities horizontally
      * @param stepsY pixels to move entities vertically
      */
-    public void moveEntitiesSafely(int stepsX, int stepsY) {
+    public boolean moveSafely(int stepsX, int stepsY) {
         for(int i=0; i<size(); i++) { // avoid ConcurrentModificationException
             get(i).moveSafely(stepsX, stepsY);
         }
+        return true;
     }
 
     /**
@@ -128,10 +155,10 @@ public class DefaultEntityManager<T extends Entity> extends ArrayList<T> impleme
      * @param entity entity to check.
      * @return number of colliders.
      */
-    public int collidersCount(Entity entity) {
+    public int collidersCount(Collidable entity) {
         int out=0;
         for (T t: this) {
-            if(t.hasCollisionWith(entity))
+            if(t instanceof Collidable collidable && collidable.hasCollisionWith(entity))
                 out++;
         }
         return out;
@@ -154,5 +181,15 @@ public class DefaultEntityManager<T extends Entity> extends ArrayList<T> impleme
             }
         }
         return nearest;
+    }
+
+    /**
+     * Returns entity's hitbox as {@link Rectangle}...
+     *
+     * @return entity's hitbox.
+     */
+    @Override
+    public Rectangle getHitbox() {
+        throw new RuntimeException("Method is unavailable.");
     }
 }

@@ -1,8 +1,9 @@
 package com.engine.map;
 
-import com.engine.entity.Entity;
+import com.engine.behavior.Collidable;
+import com.engine.behavior.Movable;
 
 public interface HorizontalMap extends Map {
-    boolean willEntityTouchGround(Entity entity, int offsetY);
+    <T extends Movable & Collidable> boolean willEntityTouchGround(T entity, int offsetY);
 
 }

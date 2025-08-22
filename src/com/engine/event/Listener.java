@@ -4,7 +4,7 @@ package com.engine.event;
  * Listener for listening events.
  * Method includes different methods for start and end of events.
  * Also used in key events.
- * @see KeyListener
+ * @see DefaultKeyListener
  */
 public interface Listener {
     /**

@@ -1,8 +1,11 @@
 package com.engine;
 
+import com.engine.behavior.Collidable;
+import com.engine.behavior.Updatable;
 import com.engine.data.UniqueInsertMap;
 import com.engine.entity.*;
-import com.engine.event.KeyListener;
+import com.engine.event.DefaultKeyListener;
+import com.engine.event.KeyHandler;
 import com.engine.map.AbstractMap;
 import com.engine.view.AbstractGameScreen;
 import com.engine.view.DisplayableDrawer;
@@ -35,7 +38,7 @@ public abstract class AbstractGame implements Runnable, Context {
     /**
      * A {@link UniqueInsertMap} that holds {@code entities} in game.
      * @see #getEntity(String, Class)
-     * @see #addEntity(String, AbstractEntity)
+     * @see #addEntity(String, Entity)
      */
     private final UniqueInsertMap<String, Entity> mEntities = new UniqueInsertMap<>();
 
@@ -46,7 +49,7 @@ public abstract class AbstractGame implements Runnable, Context {
      * You can access added entity managers using method {@link #getEntityManager(String)}
      * or {@link #getEntityManager(String, Class)} to cast before return.
      */
-    private final UniqueInsertMap<String, EntityManager<? extends Entity>> mEntityManagers=new UniqueInsertMap<>();
+    private final UniqueInsertMap<String, EntityCollection<? extends Entity>> mEntityManagers=new UniqueInsertMap<>();
 
     /**
      * Default game screen.
@@ -56,9 +59,9 @@ public abstract class AbstractGame implements Runnable, Context {
 
     /**
      * Main key listener.
-     * @see KeyListener
+     * @see KeyHandler
      */
-    private final KeyListener mKeyListener;
+    private final KeyHandler mKeyListener;
 
     /**
      * MapHandler related to current game.
@@ -94,7 +97,7 @@ public abstract class AbstractGame implements Runnable, Context {
         mKeyListener = createKeyHandler();
         mDisplay = createGameScreen();
         mPlayer = createPlayer();
-        mPlayer.startDrawing();
+        mPlayer.startRendering();
         mMap = createMapHandler();
 
         mDisplay.addKeyListener(mKeyListener);
@@ -121,10 +124,10 @@ public abstract class AbstractGame implements Runnable, Context {
     protected abstract DisplayableDrawer createGameScreen();
 
     /**
-     * Abstract method used to get {@link KeyListener} instance from subclass.
+     * Abstract method used to get {@link DefaultKeyListener} instance from subclass.
      * @return Subclass's {@code KeyListener} instance.
      */
-    protected abstract KeyListener createKeyHandler();
+    protected abstract KeyHandler createKeyHandler();
 
     /**
      * Adds an entity to the map.
@@ -143,7 +146,7 @@ public abstract class AbstractGame implements Runnable, Context {
      * @param id manager id.
      * @param entityManager entity manger to start updating.
      */
-    public void addEntityManager(String id, EntityManager<? extends Entity> entityManager) {
+    public void addEntityManager(String id, EntityCollection<? extends Entity> entityManager) {
         mEntityManagers.putPair(id, entityManager);
     }
 
@@ -153,7 +156,7 @@ public abstract class AbstractGame implements Runnable, Context {
      * @return Optional containing EntityManager OR null.
      * @see #mEntityManagers
      */
-    public final Optional<EntityManager<?>> getEntityManager(String id) {
+    public final Optional<EntityCollection<?>> getEntityManager(String id) {
         return Optional.ofNullable(mEntityManagers.get(id));
     }
 
@@ -176,7 +179,7 @@ public abstract class AbstractGame implements Runnable, Context {
      * @throws ClassCastException if found {@code EntityManager} cannot be cast to given type.
      * @see #mEntityManagers
      */
-    public final <T extends EntityManager<? extends Entity>> Optional<T> getEntityManager(String id, Class<T> clazz) throws ClassCastException {
+    public final <T extends EntityCollection<? extends Entity>> Optional<T> getEntityManager(String id, Class<T> clazz) throws ClassCastException {
         return Optional.ofNullable(clazz.cast(mEntityManagers.get(id)));
     }
 
@@ -184,9 +187,9 @@ public abstract class AbstractGame implements Runnable, Context {
      * Updates all entities in game and removed dead ones.
      */
     private void updateEverything() {
-        forEachEntity(Entity::update);
-        forEachEntityManager(EntityManager::updateEntities);
-        getMap(com.engine.map.Map.class).updateEntities();
+        forEachEntity(Updatable::update);
+        forEachEntityManager(EntityCollection::update);
+        getMap(com.engine.map.Map.class).update();
         mPlayer.update();
 
         // removed dead entities
@@ -327,12 +330,12 @@ public void run() {
     }
 
     /**
-     * Iterates through all {@link EntityManager} instances and applies the given action.
+     * Iterates through all {@link EntityCollection} instances and applies the given action.
      * @param entityManagerConsumer the action to perform on each {@code EntityManager}.
      */
-    public final synchronized void forEachEntityManager(Consumer<EntityManager<? extends Entity>> entityManagerConsumer) {
-        EntityManager<?>[] entityManagers=mEntityManagers.values().toArray(new EntityManager[0]);
-        for (EntityManager<?> entityManager: entityManagers) {
+    public final synchronized void forEachEntityManager(Consumer<EntityCollection<? extends Entity>> entityManagerConsumer) {
+        EntityCollection<?>[] entityManagers=mEntityManagers.values().toArray(new EntityCollection[0]);
+        for (EntityCollection<?> entityManager: entityManagers) {
             entityManagerConsumer.accept(entityManager);
         }
     }
@@ -390,7 +393,7 @@ public void run() {
      * Returns entity managers map.
      * @return entity managers map as unmodifiable {@link Map}.
      */
-    public final Map<String, EntityManager<?>> getEntityManagersMap() {
+    public final Map<String, EntityCollection<?>> getEntityManagersMap() {
         return Collections.unmodifiableMap(mEntityManagers);
     }
 
@@ -416,14 +419,14 @@ public void run() {
      * @param entity entity to check if collides with another entity in this context.
      * @return {@code true} if collision is detected between given entity and x entity of game; {@code false} otherwise.
      */
-    public boolean collidesWithXEntity(AbstractEntity entity) {
+    public boolean collidesWithXEntity(Collidable entity) {
         for (Entity e: mEntities.values()) {
-            if(e.hasCollisionWith(entity)) {
+            if(e instanceof Collidable collidable && collidable.hasCollisionWith(entity)) {
                 return true;
             }
         }
-        for(EntityManager<?> entityManager: mEntityManagers.values()) {
-            if(entityManager.containsCollisionWith(entity)) {
+        for(EntityCollection<?> entityManager: mEntityManagers.values()) {
+            if(entityManager.hasCollisionWith(entity)) {
                 return true;
             }
         }

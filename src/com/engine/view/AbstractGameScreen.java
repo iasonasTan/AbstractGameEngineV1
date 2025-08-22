@@ -1,7 +1,7 @@
 package com.engine.view;
 
 import com.engine.Context;
-import com.engine.entity.Entity;
+import com.engine.behavior.Renderable;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
@@ -23,18 +23,18 @@ import java.util.List;
 @SuppressWarnings("unused")
 public abstract class AbstractGameScreen extends AbstractScreen implements DisplayableDrawer {
     /**
-     * List that holds all {@link Entity.Drawer}s
-     * @see Entity.Drawer
+     * List that holds all {@link Renderable.Drawer}s
+     * @see Renderable.Drawer
      */
-    private final List<Entity.Drawer> mDrawers= new ArrayList<>() {
+    private final List<Renderable.Drawer> mDrawers= new ArrayList<>() {
         /**
          * Appends the specified element to the end of this list.
          *
          * @param drawer element to be appended to this list
-         * @return {@code true} (as specified by {@link Collection#add})
+         * @return {@code true} (as specified by {@link java.util.Collection::add})
          */
         @Override
-        public boolean add(Entity.Drawer drawer) {
+        public boolean add(Renderable.Drawer drawer) {
             if(drawer==null)
                 return false;
             return super.add(drawer);
@@ -122,8 +122,8 @@ public abstract class AbstractGameScreen extends AbstractScreen implements Displ
         graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
         // draw game
         graphics.drawImage(mBackgroundImage, 0, 0, getWidth(), getHeight(), null);
-        Entity.Drawer[] drawers=mDrawers.toArray(new Entity.Drawer[0]);
-        for (Entity.Drawer drawer: drawers) {
+        Renderable.Drawer[] drawers=mDrawers.toArray(new Renderable.Drawer[0]);
+        for (Renderable.Drawer drawer: drawers) {
             drawer.drawAll(graphics);
         }
         drawOnTopLayer(graphics);
@@ -142,13 +142,13 @@ public abstract class AbstractGameScreen extends AbstractScreen implements Displ
 
     /**
      * Adds Entity's drawer to {@link #mDrawers} implementation
-     * @see Entity.Drawer
+     * @see Renderable.Drawer
      * @param entities entities to include in drawing process.
      */
     @Override
-    public synchronized void addEntitiesToDraw(Entity... entities) {
-        for (Entity entity : entities) {
-            mDrawers.add(entity.getDrawer(Entity.Drawer.class));
+    public synchronized void addEntitiesToDraw(Renderable... entities) {
+        for (Renderable entity : entities) {
+            mDrawers.add(entity.getDrawer(Renderable.Drawer.class));
         }
     }
 
@@ -157,8 +157,8 @@ public abstract class AbstractGameScreen extends AbstractScreen implements Displ
      * @param entity entity to remove its drawer.
      */
     @Override
-    public void removeEntity(Entity entity) {
-        mDrawers.remove(entity.getDrawer(Entity.Drawer.class));
+    public void removeRenderable(Renderable entity) {
+        mDrawers.remove(entity.getDrawer(Renderable.Drawer.class));
     }
 
     /**
@@ -166,7 +166,7 @@ public abstract class AbstractGameScreen extends AbstractScreen implements Displ
      * @return drawers of this screen as List<> impl.
      */
     @Override
-    public List<? extends Entity.Drawer> getDrawers() {
+    public List<? extends Renderable.Drawer> getDrawers() {
         return mDrawers;
     }
 }

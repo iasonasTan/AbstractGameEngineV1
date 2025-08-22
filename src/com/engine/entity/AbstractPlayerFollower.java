@@ -131,7 +131,7 @@ public abstract class AbstractPlayerFollower extends AbstractEntity {
         int steps=getCurrentSpeed()*(worldX<targetX?1:-1);
         worldX+=steps;
         moveUnsafely(0, 0); // update hitbox
-        if(context.getMap(Map.class).containsCollisionWith(this)) {
+        if(context.getMap(Map.class).hasCollisionWith(this)) {
             worldX-=steps;
             jump();
             moveUnsafely(0, 0); // update hitbox

@@ -1,7 +1,8 @@
 package com.engine.map;
 
 import com.engine.Context;
-import com.engine.entity.EntityManager;
+import com.engine.behavior.Collidable;
+import com.engine.entity.EntityCollection;
 
 import java.awt.*;
 import java.lang.reflect.Constructor;
@@ -9,7 +10,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Path;
 import java.util.Optional;
 
-public interface Map extends EntityManager<Tile> {
+public interface Map extends EntityCollection<Tile> {
     void createTerrain(Path mapFile);
     Point getPosition();
 
@@ -38,7 +39,7 @@ public interface Map extends EntityManager<Tile> {
         Tile tile=tileConstructor.newInstance(context, position);
         tile.moveUnsafely(0, 0); // update rect
         map.add(tile);
-        tile.startDrawing();
+        tile.startRendering();
         return tileClass.cast(tile);
     }
 
@@ -48,10 +49,10 @@ public interface Map extends EntityManager<Tile> {
      * @return returns Optional containing block that intersects given point, empty optional if no block found.
      */
     static Optional<Tile> getBlockAt(Map map, Point blockPos) {
-        Rectangle rectangle=new Rectangle(blockPos.x-5, blockPos.y-5, 10, 10);
+        final Rectangle checkingRectangle=new Rectangle(blockPos.x-5, blockPos.y-5, 10, 10);
         Tile[] tiles=map.getEntities(new AbstractTile[0]);
         for(Tile tile: tiles) {
-            if(tile.getHitbox().intersects(rectangle)) {
+            if(tile instanceof Collidable collidable && collidable.hasCollisionWith(() -> checkingRectangle)) {
                 return Optional.of(tile);
             }
         }

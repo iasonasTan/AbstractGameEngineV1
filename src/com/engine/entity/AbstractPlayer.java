@@ -1,6 +1,6 @@
 package com.engine.entity;
 
-import com.engine.event.KeyListener;
+import com.engine.event.DefaultKeyListener;
 import com.engine.AbstractGame;
 import com.engine.animation.Direction;
 import com.engine.event.Listener;
@@ -23,7 +23,7 @@ public abstract class AbstractPlayer extends AbstractEntity implements Player {
     }
 
     protected void addListeners() {
-        context.getKeyListener(KeyListener.class)
+        context.getKeyListener(DefaultKeyListener.class)
                 // UP
                 .addListener(KeyEvent.VK_W, mainKeyListener)
                 .addListener(KeyEvent.VK_UP, mainKeyListener)
@@ -109,7 +109,7 @@ public abstract class AbstractPlayer extends AbstractEntity implements Player {
          */
         @Override
         public void keyDown() {
-            switch (context.getKeyListener(KeyListener.class).getKeyCode()) {
+            switch (context.getKeyListener(DefaultKeyListener.class).getKeyCode()) {
                 case KeyEvent.VK_A:
                 case KeyEvent.VK_LEFT:
                 case KeyEvent.VK_KP_LEFT:
@@ -138,7 +138,7 @@ public abstract class AbstractPlayer extends AbstractEntity implements Player {
          */
         @Override
         public void keyUp() {
-            switch (context.getKeyListener(KeyListener.class).getKeyCode()) {
+            switch (context.getKeyListener(DefaultKeyListener.class).getKeyCode()) {
                 case KeyEvent.VK_A:
                 case KeyEvent.VK_LEFT:
                 case KeyEvent.VK_KP_LEFT:

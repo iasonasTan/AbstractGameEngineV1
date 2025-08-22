@@ -148,7 +148,7 @@ public final class ManifestManager {
                         AbstractEntity entity=getEntityImplementation(entityElement.getTagName()); // create entity manager of X type
                         entity.loadFromXmlElement(entityElement); // load properties to entity
                         entityManager.add(entity); // add entity to entity manager
-                        entity.startDrawing(); // allow entity to draw
+                        entity.startRendering(); // allow entity to draw
                     }
                 }
                 mContext.addEntityManager(entityManagerElement.getAttribute("id"), entityManager); // add entity manager to context
@@ -170,7 +170,7 @@ public final class ManifestManager {
                 AbstractEntity entity=getEntityImplementation(typeText); // create entity with this name
                 entity.loadFromXmlElement(entityElement); // gives entity the xml element to load some properties
                 mContext.addEntity(entityElement.getAttribute("id"), entity); // adds entity to context with its ID
-                entity.startDrawing(); // allows entity to draw itself
+                entity.startRendering(); // allows entity to draw itself
             }
         }
     }
@@ -189,7 +189,7 @@ public final class ManifestManager {
                 Entity tileEntity = getEntityImplementation(typeText); // create entity
                 if (tileEntity instanceof AbstractTile tile) { // check if entity is instance of tile
                     tile.loadFromXmlElement(tileElement); // give element to entity so it can load its properties
-                    tile.startDrawing(); // allow tile to draw
+                    tile.startRendering(); // allow tile to draw
                     mContext.getMap(Map.class).add(tile); // add tile to map
                 } else { // if not
                     throw new RuntimeException("Class " + tileEntity.getClass() + " is not a tile."); // throw exception

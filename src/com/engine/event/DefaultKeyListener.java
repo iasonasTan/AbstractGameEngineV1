@@ -9,11 +9,11 @@ import java.util.function.Consumer;
 
 /**
  * Implementation of {@link java.awt.event.KeyListener}, used for easy event handling.
- * Uses methods {@link #addListener(int, Listener)}, {@link #removeEvent(int)} to add/remove events.
+ * Uses methods {@link #addListener(int, Listener)}/{@link #removeListener(int)} to add/remove events.
  * Class allows only one event per key.
  * You only have to create an instance, add it to your panel as {@code keyListener} and add events via {@link #addListener(int, Listener)}
  */
-public final class KeyListener implements java.awt.event.KeyListener {
+public final class DefaultKeyListener implements KeyHandler {
     /**
      * Map to store keys and their related events.
      * @see UniqueInsertMap
@@ -36,8 +36,10 @@ public final class KeyListener implements java.awt.event.KeyListener {
      * @param action action to add.
      * @see #mEveryEventActions
      */
-    public void addAction(Consumer<Integer> action) {
+    @Override
+    public KeyHandler addAction(Consumer<Integer> action) {
         mEveryEventActions.add(action);
+        return this;
     }
 
     /**
@@ -46,7 +48,9 @@ public final class KeyListener implements java.awt.event.KeyListener {
      * @param action action to execute when key is pressed.
      * @return returns this, making chain calls available.
      */
-    public KeyListener addListener(int key, Listener action) {
+    @Override
+    public KeyHandler addListener(int key, Listener action) {
+        System.out.println("Adding key listener...");
         events.putPair(key, action);
         return this;
     }
@@ -56,7 +60,8 @@ public final class KeyListener implements java.awt.event.KeyListener {
      * @param key key's keycode, from {@link java.awt.event.KeyEvent}
      * @return returns this, making chain calls available.
      */
-    public KeyListener removeEvent(int key) {
+    @Override
+    public KeyHandler removeListener(int key) {
         events.remove(key);
         return this;
     }
@@ -98,4 +103,5 @@ public final class KeyListener implements java.awt.event.KeyListener {
     public int getKeyCode() {
         return mLastPressedKeyCode;
     }
+
 }

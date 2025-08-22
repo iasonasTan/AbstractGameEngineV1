@@ -1,9 +1,10 @@
 package com.engine.map;
 
 import com.engine.animation.Direction;
+import com.engine.behavior.Collidable;
+import com.engine.behavior.Movable;
 import com.engine.entity.DefaultEntityManager;
 import com.engine.AbstractGame;
-import com.engine.entity.Entity;
 import com.engine.view.DisplayableDrawer;
 
 import java.awt.*;
@@ -45,13 +46,13 @@ public abstract class AbstractMap extends DefaultEntityManager<Tile> implements 
      * @param offsetY distance to move entity down, e.g. entity's height is the default value so entity checks for all blocks.
      * @return {@code true} if next ground tile exists in the map, {@code false} otherwise.
      */
-    public boolean willEntityTouchGround(Entity entity, int offsetY) {
+    public <T extends Movable & Collidable> boolean willEntityTouchGround(T entity, int offsetY) {
         if (entity.getDirection() == Direction.NONE) return true;
         final Point originalPosition=new Point(entity.getPosition());
         final int DIFF=entity.getCurrentSpeed()+2;
         int offsetX=(entity.getDirection()==Direction.RIGHT)?DIFF:-DIFF;
         entity.moveUnsafely(offsetX, offsetY);
-        boolean nextGroundTileExists = containsCollisionWith(entity); // moved entity still collides with a tile
+        boolean nextGroundTileExists = hasCollisionWith(entity); // moved entity still collides with a tile
         entity.setPosition(originalPosition); // reset entity's position
         return nextGroundTileExists;
     }
